@@ -1,0 +1,42 @@
+# Keil MDK / µVision
+[Oo]bjects/
+[Ll]istings/
+*.uvguix.*
+*.uvgui.*
+*.uvprojx.bak
+*.uvoptx.bak
+*.axf
+*.crf
+*.build_log.htm
+*.lnp
+*._ia
+*._ii
+JLinkLog.txt
+
+# STM32CubeMX can put Keil outputs in a target-named directory.
+**/MDK-ARM/**/*.o
+**/MDK-ARM/**/*.d
+**/MDK-ARM/**/*.map
+**/MDK-ARM/**/*.lst
+**/MDK-ARM/**/*.hex
+**/MDK-ARM/**/*.dep
+**/MDK-ARM/**/*.o.htm
+
+# CLion / CMake
+cmake-build-*/
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CMakeUserPresets.json
+compile_commands.json
+.ninja_deps
+.ninja_log
+**/.idea/workspace.xml
+**/.idea/shelf/
+**/.idea/httpRequests/
+
+# Windows, Office and CAD temporary files
+Thumbs.db
+Desktop.ini
+~$*
