@@ -1,6 +1,10 @@
 #include "main.h"
 UART_HandleTypeDef huart1;
 
+/* USER CODE BEGIN PV */
+static volatile uint32_t flash_test_heartbeat = 0;
+/* USER CODE END PV */
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
@@ -41,6 +45,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    HAL_Delay(500);
+    ++flash_test_heartbeat;
   }
   /* USER CODE END 3 */
 }
