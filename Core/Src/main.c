@@ -1,14 +1,53 @@
 #include "main.h"
 UART_HandleTypeDef huart1;
 
+/* USER CODE BEGIN PV */
+static volatile uint32_t flash_test_heartbeat = 0;
+/* USER CODE END PV */
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 
+/* USER CODE BEGIN 0 */
+static void Servo_PWM_Start(uint16_t initial_pulse_us)
+{
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_TIM3_CLK_ENABLE();
+
+  uint32_t timer_hz = HAL_RCC_GetPCLK1Freq();
+  if ((RCC->CFGR & RCC_CFGR_PPRE1) != 0U)
+  {
+    timer_hz *= 2U;
+  }
+
+  /* Count in microseconds. One PWM frame is 20 ms. */
+  TIM3->PSC = timer_hz / 1000000U - 1U;
+  TIM3->ARR = 20000U - 1U;
+  TIM3->CCR1 = initial_pulse_us;
+  TIM3->CCMR1 = TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE;
+  TIM3->CR1 = TIM_CR1_ARPE;
+  TIM3->EGR = TIM_EGR_UG;
+  TIM3->SR = 0U;
+
+  GPIO_InitTypeDef pin = {0};
+  pin.Pin = GPIO_PIN_6;
+  pin.Mode = GPIO_MODE_AF_PP;
+  pin.Pull = GPIO_NOPULL;
+  pin.Speed = GPIO_SPEED_FREQ_LOW;
+  pin.Alternate = GPIO_AF2_TIM3;
+  HAL_GPIO_Init(GPIOA, &pin);
+
+  TIM3->CCER = TIM_CCER_CC1E;
+  TIM3->CR1 |= TIM_CR1_CEN;
+}
+/* USER CODE END 0 */
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  static const uint16_t pulse_us[] = {1500U, 1300U, 1500U, 1700U};
+  uint32_t position = 0U;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -31,7 +70,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  Servo_PWM_Start(pulse_us[position]);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -41,6 +80,13 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    HAL_Delay(500);
+    ++flash_test_heartbeat;
+    if ((flash_test_heartbeat & 1U) == 0U)
+    {
+      position = (position + 1U) % (sizeof(pulse_us) / sizeof(pulse_us[0]));
+      TIM3->CCR1 = pulse_us[position];
+    }
   }
   /* USER CODE END 3 */
 }
