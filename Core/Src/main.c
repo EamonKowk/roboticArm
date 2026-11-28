@@ -10,40 +10,53 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN 0 */
-/* D36A channel A: PC6 = ST1, PC7 = DIR1, PD6 = EN1 (active high). */
+/* D36A: STEP and DIR on GPIOC; active-high enables on GPIOD. */
+#define STEP_A GPIO_PIN_6
+#define DIR_A  GPIO_PIN_7
+#define STEP_B GPIO_PIN_8
+#define DIR_B  GPIO_PIN_9
+#define EN_A   GPIO_PIN_6
+#define EN_B   GPIO_PIN_7
 static void Stepper_Init(void)
 {
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /* Set the output latches before enabling the GPIO drivers. */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_6, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, EN_A | EN_B, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, STEP_A | DIR_A | STEP_B | DIR_B, GPIO_PIN_RESET);
 
   GPIO_InitTypeDef pin = {0};
   pin.Mode = GPIO_MODE_OUTPUT_PP;
   pin.Pull = GPIO_NOPULL;
   pin.Speed = GPIO_SPEED_FREQ_LOW;
-  pin.Pin = GPIO_PIN_6;
+  pin.Pin = EN_A | EN_B;
   HAL_GPIO_Init(GPIOD, &pin);
-  pin.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+  pin.Pin = STEP_A | DIR_A | STEP_B | DIR_B;
   HAL_GPIO_Init(GPIOC, &pin);
 }
 
-static void Stepper_Move(GPIO_PinState direction)
+static void Stepper_Move(uint16_t step_pins, uint16_t dir_pins, GPIO_PinState direction)
 {
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, direction);
+  HAL_GPIO_WritePin(GPIOC, dir_pins, direction);
   HAL_Delay(5U);  /* Allow DIR to settle before the first rising edge. */
 
   for (uint32_t pulse = 0U; pulse < 200U; ++pulse)
   {
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, step_pins, GPIO_PIN_SET);
     HAL_Delay(4U);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOC, step_pins, GPIO_PIN_RESET);
     HAL_Delay(4U);
   }
 
   ++stepper_completed_moves;
+}
+static void Stepper_RoundTrip(uint16_t step_pins, uint16_t dir_pins)
+{
+  Stepper_Move(step_pins, dir_pins, GPIO_PIN_SET);
+  HAL_Delay(1000U);
+  Stepper_Move(step_pins, dir_pins, GPIO_PIN_RESET);
+  HAL_Delay(1000U);
 }
 /* USER CODE END 0 */
 
@@ -75,7 +88,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   Stepper_Init();
   HAL_Delay(1000U);
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_6, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOD, EN_A | EN_B, GPIO_PIN_SET);
   HAL_Delay(10U);  /* Allow the driver to wake up. */
   /* USER CODE END 2 */
 
@@ -86,10 +99,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    Stepper_Move(GPIO_PIN_SET);
-    HAL_Delay(1000U);
-    Stepper_Move(GPIO_PIN_RESET);
-    HAL_Delay(1000U);
+    Stepper_RoundTrip(STEP_A, DIR_A);
+    Stepper_RoundTrip(STEP_B, DIR_B);
+    Stepper_RoundTrip(STEP_A | STEP_B, DIR_A | DIR_B);
   }
   /* USER CODE END 3 */
 }
